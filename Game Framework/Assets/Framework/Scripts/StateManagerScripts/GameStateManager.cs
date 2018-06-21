@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public abstract class GameStateManager : MonoBehaviour {
+public abstract class AbstractGameStateManager : MonoBehaviour {
 
     #region Serialized Fields
 
@@ -44,14 +42,21 @@ public abstract class GameStateManager : MonoBehaviour {
 
     #region Fields and Properties
 
-    private bool gameWon;
-
+    private GameStatus currentGameStatus = GameStatus.Pending;
+    protected GameStatus CurrentGameStatus {
+        get { return currentGameStatus; }
+        set {
+            if (currentGameStatus != GameStatus.Finalized) {
+                currentGameStatus = value;
+            }
+        }
+    }
 
     #endregion Fields and Properties
 
     #region Delegates
     public delegate void OnLevelComplete();
-    public static event OnLevelComplete LevelComplete;
+    public static event OnLevelComplete LevelCompleted;
 
     public delegate void OnLevelFailed();
     public static event OnLevelFailed LevelFailed;
@@ -65,7 +70,6 @@ public abstract class GameStateManager : MonoBehaviour {
     /// </summary>
     void Start() {
         OnBeforeStart();
-        gameWon = false;
         OnAfterStart();
     }
 
@@ -74,17 +78,23 @@ public abstract class GameStateManager : MonoBehaviour {
 
     /// <summary>
     /// Method used for updating. Called by they unity framework
-    /// This implementation will call the <see cref="LevelComplete"/> event if <see cref="gameWon"/> is set to true
+    /// This implementation will call the appropriate event based on the current game status
     /// </summary>
     void Update() {
         OnBeforeUpdate();
 
         //Core update function
-        if (gameWon) {
-            gameWon = false;
-            if (LevelComplete != null) {
-                LevelComplete();
-            }
+        switch (CurrentGameStatus) {
+            case GameStatus.Win:
+                if (LevelCompleted != null) {
+                    LevelCompleted();
+                }
+                break;
+            case GameStatus.Loss:
+                if (LevelFailed != null) {
+                    LevelFailed();
+                }
+                break;
         }
 
         OnAfterUpdate();
@@ -94,5 +104,12 @@ public abstract class GameStateManager : MonoBehaviour {
     protected virtual void OnAfterUpdate() { }
 
     #endregion Unity Hook Points
+
+    protected enum GameStatus {
+        Win,
+        Loss,
+        Pending,
+        Finalized
+    }
 }
 
